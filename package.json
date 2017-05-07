@@ -19,6 +19,7 @@
   "dependencies": {
     "event-stream": "^3.3.4",
     "express": "^4.15.2",
+    "nodeadmin": "^0.1.2",
     "sequelize": "^3.30.4",
     "xml2js": "^0.4.17"
   }

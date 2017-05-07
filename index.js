@@ -1,61 +1,9 @@
-var fs = require('fs');
-var util = require('util');
-var stream = require('stream');
-var es = require('event-stream');
-var parseString = require('xml2js').parseString;
-var Sequelize = require('sequelize');
-var sequelize = new Sequelize('sms_parser', 'vitruviantech', 'catalyst', {
-    host: '172.28.128.3',
-});
+var express = require('express');
+var app = express();
 
-var Message = sequelize.define('Message', {
-    body: Sequelize.STRING,
-    address: Sequelize.STRING,
-    date: Sequelize.DATE,
-    date_sent: Sequelize.DATE,
-    service_center: Sequelize.STRING,
-    readable_date: Sequelize.STRING,
-    contact_name: Sequelize.STRING
-}, {
-    timestamps: false
-});
+var nodeadmin = require('nodeadmin');
+app.use(nodeadmin(app));
 
-sequelize.sync().then(function() {
-    Message.destroy({ where: {}, truncate: true }).then(function() {
-        console.dir('Syncing messages...');
-
-        var stream = fs.createReadStream('sms.xml')
-            .pipe(es.split())
-            .pipe(es.mapSync(function (line) {
-                stream.pause();
-
-                parseString(line, function (err, result) {
-                    var message;
-
-                    if(result) {
-                        if(result.sms) {
-                            message = result.sms.$;
-
-                            Message.create(Object.assign(message, {
-                                date: +message.date,
-                                date_sent: +message.date_sent
-                            })).then(function () {
-                                stream.resume();
-                            });
-                        } else {
-                            stream.end();
-                        }
-                    } else {
-                        stream.resume();
-                    }
-                });
-            })
-                .on('error', function (err) {
-                    console.dir(err);
-                })
-                .on('end', function () {
-                    console.dir('Messages synced.');
-                })
-            );
-    });
-});
+app.listen(3000, function () {
+    console.log('SMS Parser app listening on port 3000...')
+})
