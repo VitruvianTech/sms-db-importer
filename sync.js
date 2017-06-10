@@ -4,6 +4,7 @@ var stream = require('stream');
 var es = require('event-stream');
 var parseString = require('xml2js').parseString;
 var Sequelize = require('sequelize');
+var moment = require('moment');
 var sequelize = new Sequelize('sms_parser', 'vitruviantech', 'catalyst', {
     host: '172.28.128.3'
 });
@@ -37,7 +38,7 @@ sequelize.sync().then(function() {
                             message = result.sms.$;
 
                             Message.create(Object.assign(message, {
-                                date: +message.date,
+                                date: +new Date(moment(+message.date).subtract(4, 'hours')),
                                 date_sent: +message.date_sent,
                                 contact_name: !(+message.date_sent) ? 'me' : message.contact_name
                             })).then(function () {
