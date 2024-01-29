@@ -1,9 +1,63 @@
-var express = require('express');
-var app = express();
+var fs = require('fs');
+var util = require('util');
+var stream = require('stream');
+var es = require('event-stream');
+var parseString = require('xml2js').parseString;
+var Sequelize = require('sequelize');
+var moment = require('moment');
+var sequelize = new Sequelize('sms_parser', 'root', '', {
+    host: 'localhost'
+});
 
-var nodeadmin = require('nodeadmin');
-app.use(nodeadmin(app));
+var Message = sequelize.define('Message', {
+    body: Sequelize.TEXT,
+    address: Sequelize.STRING,
+    date: Sequelize.DATE,
+    date_sent: Sequelize.DATE,
+    service_center: Sequelize.STRING,
+    readable_date: Sequelize.STRING,
+    contact_name: Sequelize.STRING
+}, {
+    timestamps: false
+});
 
-app.listen(3000, function () {
-    console.log('SMS Parser app listening on port 3000...')
-})
+sequelize.sync().then(function() {
+    Message.destroy({ where: {}, truncate: true }).then(function() {
+        console.dir('Syncing messages...');
+
+        var stream = fs.createReadStream(process.argv[2])
+            .pipe(es.split())
+            .pipe(es.mapSync(function (line) {
+                stream.pause();
+
+                parseString(line, function (err, result) {
+                    var message;
+
+                    if(result) {
+                        if(result.sms) {
+                            message = result.sms.$;
+
+                            Message.create(Object.assign(message, {
+                                date: +new Date(moment(+message.date).subtract(4, 'hours')),
+                                date_sent: +message.date_sent,
+                                contact_name: !(+message.date_sent) ? 'me' : message.contact_name
+                            })).then(function () {
+                                stream.resume();
+                            });
+                        } else {
+                            stream.end();
+                        }
+                    } else {
+                        stream.resume();
+                    }
+                });
+            })
+                .on('error', function (err) {
+                    console.dir(err);
+                })
+                .on('end', function () {
+                    console.dir('Messages synced.');
+                })
+            );
+    });
+});
