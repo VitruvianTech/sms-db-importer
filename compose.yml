@@ -21,8 +21,6 @@ services:
       - "1337:80"
     environment:
       PMA_HOST: mariadb
-    volumes:
-      - .:/app
 
 volumes:
   data:
